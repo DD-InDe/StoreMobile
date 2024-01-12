@@ -1,3 +1,5 @@
+## Настройка проектов
+
 ### API
 
 В `Program.cs` прописываем **Cors** (Cross-Origin Resource Sharing) для обмена ресурсами с разными источникми.
