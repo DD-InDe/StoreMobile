@@ -14,7 +14,6 @@ import com.example.storemobile.models.Manufacturer
 import com.example.storemobile.models.Product
 import com.example.storemobile.models.Provider
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,27 +22,19 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
-import java.lang.reflect.Type
 
-class UpdateActivity : AppCompatActivity() {
+class AddActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_update)
-
-        val json = intent.getStringExtra("product")
-        val type: Type = object : TypeToken<Product>() {}.type
-        var product = Gson().fromJson<Product>(json, type)
+        setContentView(R.layout.activity_add)
 
         val categorySpinner: Spinner = findViewById(R.id.category)
         val manufacturerSpinner: Spinner = findViewById(R.id.manufacturer)
         val providerSpinner: Spinner = findViewById(R.id.provider)
 
-        val name: EditText = findViewById(R.id.update_name)
-        val cost: EditText = findViewById(R.id.update_cost)
+        val name: EditText = findViewById(R.id.new_name)
+        val cost: EditText = findViewById(R.id.new_cost)
         val context = this
-
-        name.setText(product.productName)
-        cost.setText(product.cost.toString())
 
         lateinit var categoryList: List<Category>
         lateinit var manufacturerList: List<Manufacturer>
@@ -74,9 +65,6 @@ class UpdateActivity : AppCompatActivity() {
                 manufacturerSpinner.adapter = manufacturerAdapter
                 providerSpinner.adapter = providerAdapter
 
-                categorySpinner.setSelection(categoryList.indexOf(product.category))
-                manufacturerSpinner.setSelection(manufacturerList.indexOf(product.manufacturer))
-                providerSpinner.setSelection(providerList.indexOf(product.provider))
             } catch (e: Exception) {
                 Log.e("Ошибка", "Произошла ошибка при загрузке данных. ${e.message}")
             }
@@ -88,15 +76,16 @@ class UpdateActivity : AppCompatActivity() {
                 manufacturerList[manufacturerSpinner.selectedItemId.toInt()].manufacturerId
             val selectedProvider =
                 providerList[providerSpinner.selectedItemId.toInt()].providerId
-            product.productName = name.text.toString()
-            product.cost = cost.text.toString().toFloat()
-            product.categoryId = selectedCategory
-            product.manufacturerId = selectedManufacturer
-            product.productId = selectedProvider
+            val product = Product(
+                productName = name.text.toString(),
+                cost = cost.text.toString().toFloat(),
+                categoryId = selectedCategory,
+                manufacturerId = selectedManufacturer,
+                providerId = selectedProvider)
 
             CoroutineScope(Dispatchers.Main).launch {
                 try {
-                    putProductToServer(product)
+                    postProductToServer(product)
                 } catch (e: Exception) {
                     Log.e("Ошибка", "Произошла ошибка при сохранении: ${e.message}")
                 }
@@ -104,42 +93,33 @@ class UpdateActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun putProductToServer(updateProduct: Product) = withContext(Dispatchers.IO) {
+    private suspend fun postProductToServer(newProduct: Product) = withContext(Dispatchers.IO) {
         val client = OkHttpClient()
 
-        updateProduct.category = null
-        updateProduct.manufacturer = null
-        updateProduct.provider = null
-
-        val json = Gson().toJson(updateProduct)
+        val json = Gson().toJson(newProduct)
 
         val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json)
 
         val request =
-            Request.Builder().url("http://192.168.1.49:5171/api/Product/${updateProduct.productId}")
-                .put(body)
+            Request.Builder().url("http://192.168.1.49:5171/api/Product")
+                .post(body)
                 .build()
 
         client.newCall(request).execute().use {}
     }
 
     private suspend fun loadCategoryFromServer(): List<Category> = withContext(Dispatchers.IO) {
-        // создание экземпляра OkHttpClient
         val client = OkHttpClient()
 
-        // создание запроса к серверу
         val request = Request.Builder()
             .url("http://192.168.1.49:5171/api/Category")
             .build()
 
-        // выполнение запроса и получение ответа
         val response = client.newCall(request).execute()
         val json = response.body?.string()
 
-        // парсинг ответа в список объектов Product с использованием Gson
         val categoryList = Gson().fromJson(json, Array<Category>::class.java).toList()
 
-        // закрытие ресурсов и возврат списка объектов Product
         response.close()
         categoryList
     }

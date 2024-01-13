@@ -1,6 +1,7 @@
 package com.example.storemobile.activities
 
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
@@ -10,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.storemobile.ProductAdapter
 import com.example.storemobile.R
 import com.example.storemobile.models.Product
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.internal.bind.TypeAdapters
 import com.google.gson.reflect.TypeToken
@@ -26,11 +29,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val add_button:FloatingActionButton = findViewById(R.id.add_button)
+
+        add_button.setOnClickListener {
+            val intent = Intent(this,AddActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private suspend fun loadProductsFromServer(): MutableList<Product> =
         withContext(Dispatchers.IO) {
-            // создание экземпляра OkHttpClient
             val OkHttp = OkHttpClient()
 
             val request: Request =
@@ -40,16 +48,8 @@ class MainActivity : AppCompatActivity() {
             try {
                 val res = OkHttp.newCall(request).execute().body?.string().toString()
 
-                val gson = GsonBuilder()
-                    .registerTypeAdapterFactory(
-                        TypeAdapters.newFactory(
-                            BigDecimal::class.java,
-                            TypeAdapters.BIG_DECIMAL
-                        )
-                    )
-                    .create()
                 val type: Type = object : TypeToken<MutableList<Product>>() {}.type
-                products = gson.fromJson<MutableList<Product>>(res, type)
+                products = Gson().fromJson<MutableList<Product>>(res, type)
             } catch (e: Exception) {
                 println(e.message)
             }
@@ -63,8 +63,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadProductsInRV(context: Context){
         val productList: RecyclerView = findViewById(R.id.products_rv)
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+        lifecycleScope.launch {withContext(Dispatchers.IO) {
+
                 try {
                     val products = loadProductsFromServer()
                     runOnUiThread {
