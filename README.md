@@ -25,7 +25,7 @@ app.UseCors()
 ```xaml
 <uses-permission android:name="android.permission.INTERNET" />
 ```
-Атрибуты **application** (необязательно, т.к. они по-умолчанию true):
+Атрибуты **application** (обязательно, т.к. без них не будет работать подключение):
 ```xaml
 android:allowBackup="true"
 android:allowClearUserData="true"
